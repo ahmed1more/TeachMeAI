@@ -17,7 +17,7 @@ df1 = pd.get_dummies(data, columns=['occupation', 'education_level'])
 x = df1.drop('loan_status', axis=1)
 y = df1['loan_status']
 
-x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.2, random_state=90)
+x_train,x_test,y_train,y_test=train_test_split(x,y,test_size=0.3, random_state=90)
 x_train.head()
 
 
