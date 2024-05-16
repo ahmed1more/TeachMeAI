@@ -10,7 +10,7 @@ os.chdir('decision_tree')
 
 data = pd.read_csv("loan.csv")
 
-import numpy as np
+data.drop_duplicates(keep='first', inplace=True)
 
 def detect_outliers_iqr(data, k=1.5):
     """
