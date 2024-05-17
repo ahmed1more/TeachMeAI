@@ -1,9 +1,7 @@
-from app import *
-from pre_win import *
+from app import gui
 """
 Init the App
 """
 
 if __name__ == "__main__":
-    app = App(icon_path="./assets/AI-icon.png",title="ML-GUI")
-    app.run()
+    gui.run()

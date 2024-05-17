@@ -3,6 +3,10 @@ import tkinter.ttk as ttk
 from tkinter import filedialog
 from tkinter import scrolledtext
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import Normalizer
 import io
 
 class App:
@@ -24,6 +28,7 @@ class App:
         """open broseing window to choose the path"""
         path = filedialog.askopenfilename()
         self.path.set(path)
+        self.data_name = path.split("/")[-1].split(".")[0]
 
     def choose_data_w(self):
         """create butten and label for open browsing window by calling 
@@ -42,7 +47,7 @@ class App:
         label.grid(row=1,column=0)
         box_codes = ttk.Combobox(self.root, textvariable=self.selected_code, values=codes,state='readonly')
         box_codes.grid(row=1,column=1,sticky="w")
-        ok = tk.Button(self.root,text="OK",command=self.load_data)
+        ok = tk.Button(self.root,text="Load",command=self.load_data)
         ok.grid(row=1,column=2,sticky="we",padx=50)
 
     def load_data(self):
@@ -50,11 +55,11 @@ class App:
         and display info by calling (info_w) function"""
         self.df = pd.read_csv(self.path.get(),encoding=self.selected_code.get())
         self.display_info(self.df)
-        pro_button = tk.Button(self.root,text="Preprossing",command=self.load_window)
+        pro_button = tk.Button(self.root,text="Preprossing",command=lambda :self.load_window("pre"))
         pro_button.grid(row=2,column=2,ipadx=35,ipady=10,pady=15,sticky="n")
-        vis_button = tk.Button(self.root,text="Visualzation",command=self.load_window)
+        vis_button = tk.Button(self.root,text="Visualzation",command=lambda :self.load_window("vis"))
         vis_button.grid(row=2,column=2,ipadx=35,ipady=10)
-        model_button = tk.Button(self.root,text="Train the model",command=self.load_window)
+        model_button = tk.Button(self.root,text="Train the model",command=lambda :self.load_window("train"))
         model_button.grid(row=2,column=2,ipadx=35,ipady=10,pady=15,sticky="s")
     
     def display_info(self,df):
@@ -65,11 +70,199 @@ class App:
         label.insert(tk.END,info.get())
         label.grid(row=2,column=0,columnspan=2,padx=10,pady=10,sticky="nesw")
 
-    def load_window(self):
-        print("lol")
+    def load_window(self,choose):
+        if (choose =="pre"):
+            self.pre_windowp = pre_window(perent_window=gui,icon_path="./assets/AI-icon.png")
+            self.pre_windowp.load_GUI()
+        elif (choose == "vis"):
+            self.vis_windowp = vis_window(perent_window=gui,icon_path="./assets/AI-icon.png")
+            self.vis_windowp.load_GUI()
+        elif (choose == "train"):
+            self.ml_windowp = ML_window(perent_window=gui,icon_path="./assets/AI-icon.png")
+            self.ml_windowp.load_GUI()
         
     def run(self):
         """Run the main loop."""
         self.choose_data_w()
         self.coding_list_w()
         self.root.mainloop()
+
+class pre_window:
+    def __init__(self,perent_window,icon_path:str,title = "Preprossing",width:int = 720,height:int = 400,**karg):
+        """the main window for the app with 
+        all the argument needed for the app"""
+        self.perant = perent_window
+        self.pre_window = tk.Toplevel()
+        self.df_pre = gui.df
+        self.data_name = gui.data_name
+        self.pre_window.title(title)
+        icon_image = tk.PhotoImage(file=icon_path)
+        self.pre_window.iconphoto(True,icon_image)
+        self.pre_window.geometry(f"{width}x{height}")
+        self.pre_window.resizable(False, False)
+        self.pre_window.columnconfigure((0,1,2),weight=1,uniform='a')
+        self.pre_window.rowconfigure((0,1,2,3,4,5,6),weight=1,uniform='a')
+
+    def load_GUI(self):
+        """Load the labels and buttens in preprossing window"""
+
+        # drop columns
+        label_dc = tk.Label(self.pre_window,relief='ridge',text="Drop Column :")
+        label_dc.grid(row=0,column=0,padx=10,sticky="we")
+        columns = [col for col in self.df_pre.columns]
+        dc_columns=columns.copy()
+        dc_columns.insert(0,"No Drop")
+        self.drop_col = tk.StringVar(value="No Drop")
+        combobox_dc = ttk.Combobox(self.pre_window,textvariable=self.drop_col,values=dc_columns,state='readonly')
+        combobox_dc.grid(row=0,column=1,columnspan=2,padx=10,sticky="we")
+        # drop duplicates
+        label_dd = tk.Label(self.pre_window,relief='ridge',text="Drop Duplcats :")
+        label_dd.grid(row=1,column=0,padx=10,sticky="we")
+        self.var_dd = tk.StringVar(value="No")
+        redio_n_dd = ttk.Radiobutton(self.pre_window,text="No",variable=self.var_dd,value="No")
+        redio_y_dd = ttk.Radiobutton(self.pre_window,text="Yes",variable=self.var_dd,value="Yes")
+        redio_y_dd.grid(row=1,column=1)
+        redio_n_dd.grid(row=1,column=2)
+        # drop nulls
+        label_dn = tk.Label(self.pre_window,relief='ridge',text="Drop Nulls :")
+        label_dn.grid(row=2,column=0,padx=10,sticky="we")
+        columns_dn = columns.copy()
+        columns_dn.insert(0,"No Drop")
+        columns_dn.insert(1,"All columns")
+        self.radio_var_dn = tk.StringVar(value="any")
+        self.combo_dn = tk.StringVar(value="No Drop")
+        redio_all_dn = ttk.Radiobutton(self.pre_window,text="All",variable=self.radio_var_dn,value="all")
+        redio_any_dn = ttk.Radiobutton(self.pre_window,text="Any",variable=self.radio_var_dn,value="any")
+        combobox_dn = ttk.Combobox(self.pre_window,textvariable=self.combo_dn,values=columns_dn,state='readonly')
+        redio_any_dn.grid(row=2,column=1,sticky="w",padx=50)
+        redio_all_dn.grid(row=2,column=1,sticky="e",padx=50)
+        combobox_dn.grid(row=2,column=2,padx=10,sticky="we")
+
+        # scale
+        label_scale = tk.Label(self.pre_window,relief='ridge',text="Scale Column :")
+        label_scale.grid(row=3,column=0,padx=10,sticky="we")
+        self.scale_technique = tk.StringVar(value="MinMaxScaler")
+        self.scale_column1 = tk.StringVar(value="No Scale")
+        self.scale_column2 = tk.StringVar(value="No Scale")
+        technique = ["MinMaxScaler","StandardScaler","Normalizer"]
+        columns_scale = columns.copy()
+        columns_scale.insert(0,"No Scale")
+        combobox_scalet = ttk.Combobox(self.pre_window,textvariable=self.scale_technique,values=technique,state='readonly')
+        combobox_scalec1 = ttk.Combobox(self.pre_window,textvariable=self.scale_column1,width=10,values=columns_scale.copy(),state='readonly')
+        combobox_scalec2 = ttk.Combobox(self.pre_window,textvariable=self.scale_column2,width=10,values=columns_scale.copy(),state='readonly')
+        combobox_scalet.grid(row=3,column=1,padx=10,sticky="we")
+        combobox_scalec1.grid(row=3,column=2,padx=10,sticky="w")
+        combobox_scalec2.grid(row=3,column=2,padx=10,sticky="e")
+        
+        #Encoder
+        label_enco = tk.Label(self.pre_window,relief='ridge',text="Encode Column :")
+        label_enco.grid(row=4,column=0,padx=10,sticky="we")
+        self.enco_technique = tk.StringVar(value="One Hot Encoder")
+        self.enco_column = tk.StringVar(value="No Encoding")
+        encoders = ["One Hot Encoder","Label Encoder"]
+        columns_enco = columns.copy()
+        columns_enco.insert(0,"No Encoding")
+        combobox_encot = ttk.Combobox(self.pre_window,textvariable=self.enco_technique,values=encoders,state='readonly')
+        combobox_encoc = ttk.Combobox(self.pre_window,textvariable=self.enco_column,values=columns_enco,state='readonly')
+        combobox_encot.grid(row=4,column=1,padx=10,sticky="we")
+        combobox_encoc.grid(row=4,column=2,padx=10,sticky="we")
+
+        # apply and save buttons
+        button_apply = tk.Button(self.pre_window,text="Apply",command=self.apply)
+        button_apply.grid(row=6,column=0,padx=10,pady=10,sticky="we")
+        button_apply = tk.Button(self.pre_window,text="Save",command=self.save)
+        button_apply.grid(row=6,column=2,padx=10,pady=10,sticky="we")
+
+    def apply(self):
+        # drop columns
+        if self.drop_col.get() != "No Drop":
+            self.df_pre = self.df_pre.drop(self.drop_col.get(),axis="columns")
+        # drop duplicates
+        if self.var_dd.get() != "No":
+            self.df_pre.drop_duplicates()
+        # drop nulls
+        if self.combo_dn.get() != "No Drop":
+            if self.combo_dn.get() == "All columns":
+                self.df_pre = self.df_pre.dropna(how=self.radio_var_dn.get())
+            else:
+                self.df_pre[self.combo_dn.get()] = self.df_pre[self.combo_dn.get()].dropna(how=self.radio_var_dn.get())
+        # scale
+        if (self.scale_column1.get()!="No Scale") and (self.scale_column2.get()!="No Scale"):
+            if self.scale_technique.get()=="StandardScaler":
+                scaler = StandardScaler()
+                scaled = scaler.fit_transform(self.df_pre[[self.scale_column1.get(),self.scale_column2.get()]])
+                self.df_pre[self.scale_column1.get()] = scaled[:,0]
+                self.df_pre[self.scale_column2.get()] = scaled[:,1]
+                
+            elif self.scale_technique.get()=="MinMaxScaler":
+                scaler = MinMaxScaler()
+                scaled = scaler.fit_transform(self.df_pre[[self.scale_column1.get(),self.scale_column2.get()]])
+                self.df_pre[self.scale_column1.get()] = scaled[:,0]
+                self.df_pre[self.scale_column2.get()] = scaled[:,1]
+                
+            elif self.scale_technique.get()=="Normalizer":
+                scaler = Normalizer()
+                scaled = scaler.fit_transform(self.df_pre[[self.scale_column1.get(),self.scale_column2.get()]])
+                self.df_pre[self.scale_column1.get()] = scaled[:,0]
+                self.df_pre[self.scale_column2.get()] = scaled[:,1]
+                
+            
+        if self.enco_column.get()!="No Encoding":
+            if self.enco_technique.get()=="One Hot Encoder":
+                onehot=pd.get_dummies(self.df_pre[self.enco_column.get()])
+                self.df_pre=self.df_pre.drop([self.enco_column.get()],axis="columns")
+                self.df_pre = self.df_pre.join(onehot)
+            elif self.enco_technique.get()=="Label Encoder":
+                labelcode = LabelEncoder()
+                self.df_pre[self.enco_column.get()] = labelcode.fit_transform(self.df_pre[self.enco_column.get()])
+
+        self.load_GUI()
+    
+    def save(self):
+        self.df_pre.to_csv(f"data/pre_{self.data_name}.csv",index=False)
+        self.load_GUI()
+
+        
+
+
+class vis_window():
+    def __init__(self,perent_window,icon_path:str,title = "Visualization",width:int = 720,height:int = 400,**karg):
+        """the main window for the app with 
+        all the argument needed for the app"""
+        self.perant = perent_window
+        self.vis_window = tk.Toplevel()
+        self.vis_window.title(title)
+        icon_image = tk.PhotoImage(file=icon_path)
+        self.vis_window.iconphoto(True,icon_image)
+        self.vis_window.geometry(f"{width}x{height}")
+        self.vis_window.resizable(False, False)
+        self.vis_window.columnconfigure((0,1,2),weight=1,uniform='a')
+        self.vis_window.rowconfigure((0,1,2,3,4,5,6),weight=1,uniform='a')
+
+    def load_GUI():
+        pass
+
+
+
+class ML_window:
+    def __init__(self,perent_window,icon_path:str,title = "ML",width:int = 720,height:int = 400,**karg):
+        """the main window for the app with 
+        all the argument needed for the app"""
+        self.perant = perent_window
+        self.ml_window = tk.Toplevel()
+        self.ml_window.title(title)
+        icon_image = tk.PhotoImage(file=icon_path)
+        self.ml_window.iconphoto(True,icon_image)
+        self.ml_window.geometry(f"{width}x{height}")
+        self.ml_window.resizable(False, False)
+        self.ml_window.columnconfigure((0,1,2),weight=1,uniform='a')
+        self.ml_window.rowconfigure((0,1,2,3,4,5,6),weight=1,uniform='a')
+
+    def load_GUI():
+        pass
+
+
+
+
+
+gui = App(icon_path="./assets/AI-icon.png",title="ML-GUI")
