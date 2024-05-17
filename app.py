@@ -7,7 +7,10 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import Normalizer
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import io
+
 
 class App:
     encoding = ('utf-8','iso-8859-1','windows-1252','iso-8859-2','utf-16le','utf-16be','ascii','cp1252')
@@ -93,8 +96,8 @@ class pre_window:
         all the argument needed for the app"""
         self.perant = perent_window
         self.pre_window = tk.Toplevel()
-        self.df_pre = gui.df
-        self.data_name = gui.data_name
+        
+        self.data_name = self.perant.data_name
         self.pre_window.title(title)
         icon_image = tk.PhotoImage(file=icon_path)
         self.pre_window.iconphoto(True,icon_image)
@@ -109,7 +112,7 @@ class pre_window:
         # drop columns
         label_dc = tk.Label(self.pre_window,relief='ridge',text="Drop Column :")
         label_dc.grid(row=0,column=0,padx=10,sticky="we")
-        columns = [col for col in self.df_pre.columns]
+        columns = [col for col in self.perant.df.columns]
         dc_columns=columns.copy()
         dc_columns.insert(0,"No Drop")
         self.drop_col = tk.StringVar(value="No Drop")
@@ -176,53 +179,51 @@ class pre_window:
     def apply(self):
         # drop columns
         if self.drop_col.get() != "No Drop":
-            self.df_pre = self.df_pre.drop(self.drop_col.get(),axis="columns")
+            self.perant.df = self.perant.df.drop(self.drop_col.get(),axis="columns")
         # drop duplicates
         if self.var_dd.get() != "No":
-            self.df_pre.drop_duplicates()
+            self.perant.df.drop_duplicates()
         # drop nulls
         if self.combo_dn.get() != "No Drop":
             if self.combo_dn.get() == "All columns":
-                self.df_pre = self.df_pre.dropna(how=self.radio_var_dn.get())
+                self.perant.df = self.perant.df.dropna(how=self.radio_var_dn.get())
             else:
-                self.df_pre[self.combo_dn.get()] = self.df_pre[self.combo_dn.get()].dropna(how=self.radio_var_dn.get())
+                self.perant.df[self.combo_dn.get()] = self.perant.df[self.combo_dn.get()].dropna(how=self.radio_var_dn.get())
         # scale
         if (self.scale_column1.get()!="No Scale") and (self.scale_column2.get()!="No Scale"):
             if self.scale_technique.get()=="StandardScaler":
                 scaler = StandardScaler()
-                scaled = scaler.fit_transform(self.df_pre[[self.scale_column1.get(),self.scale_column2.get()]])
-                self.df_pre[self.scale_column1.get()] = scaled[:,0]
-                self.df_pre[self.scale_column2.get()] = scaled[:,1]
+                scaled = scaler.fit_transform(self.perant.df[[self.scale_column1.get(),self.scale_column2.get()]])
+                self.perant.df[self.scale_column1.get()] = scaled[:,0]
+                self.perant.df[self.scale_column2.get()] = scaled[:,1]
                 
             elif self.scale_technique.get()=="MinMaxScaler":
                 scaler = MinMaxScaler()
-                scaled = scaler.fit_transform(self.df_pre[[self.scale_column1.get(),self.scale_column2.get()]])
-                self.df_pre[self.scale_column1.get()] = scaled[:,0]
-                self.df_pre[self.scale_column2.get()] = scaled[:,1]
+                scaled = scaler.fit_transform(self.perant.df[[self.scale_column1.get(),self.scale_column2.get()]])
+                self.perant.df[self.scale_column1.get()] = scaled[:,0]
+                self.perant.df[self.scale_column2.get()] = scaled[:,1]
                 
             elif self.scale_technique.get()=="Normalizer":
                 scaler = Normalizer()
-                scaled = scaler.fit_transform(self.df_pre[[self.scale_column1.get(),self.scale_column2.get()]])
-                self.df_pre[self.scale_column1.get()] = scaled[:,0]
-                self.df_pre[self.scale_column2.get()] = scaled[:,1]
+                scaled = scaler.fit_transform(self.perant.df[[self.scale_column1.get(),self.scale_column2.get()]])
+                self.perant.df[self.scale_column1.get()] = scaled[:,0]
+                self.perant.df[self.scale_column2.get()] = scaled[:,1]
                 
             
         if self.enco_column.get()!="No Encoding":
             if self.enco_technique.get()=="One Hot Encoder":
-                onehot=pd.get_dummies(self.df_pre[self.enco_column.get()])
-                self.df_pre=self.df_pre.drop([self.enco_column.get()],axis="columns")
-                self.df_pre = self.df_pre.join(onehot)
+                onehot=pd.get_dummies(self.perant.df[self.enco_column.get()])
+                self.perant.df=self.perant.df.drop([self.enco_column.get()],axis="columns")
+                self.perant.df = self.perant.df.join(onehot)
             elif self.enco_technique.get()=="Label Encoder":
                 labelcode = LabelEncoder()
-                self.df_pre[self.enco_column.get()] = labelcode.fit_transform(self.df_pre[self.enco_column.get()])
+                self.perant.df[self.enco_column.get()] = labelcode.fit_transform(self.perant.df[self.enco_column.get()])
 
         self.load_GUI()
     
     def save(self):
-        self.df_pre.to_csv(f"data/pre_{self.data_name}.csv",index=False)
+        self.perant.df.to_csv(f"data/pre_{self.data_name}.csv",index=False)
         self.load_GUI()
-
-        
 
 
 class vis_window():
@@ -230,17 +231,56 @@ class vis_window():
         """the main window for the app with 
         all the argument needed for the app"""
         self.perant = perent_window
+        self.df_vis = self.perant.df
         self.vis_window = tk.Toplevel()
         self.vis_window.title(title)
         icon_image = tk.PhotoImage(file=icon_path)
         self.vis_window.iconphoto(True,icon_image)
         self.vis_window.geometry(f"{width}x{height}")
         self.vis_window.resizable(False, False)
-        self.vis_window.columnconfigure((0,1,2),weight=1,uniform='a')
-        self.vis_window.rowconfigure((0,1,2,3,4,5,6),weight=1,uniform='a')
+        self.vis_window.columnconfigure(0,weight=4,uniform='a')
+        self.vis_window.columnconfigure(1,weight=1,uniform='a')
+        self.vis_window.rowconfigure((0,1,2,3),weight=1,uniform='a')
 
-    def load_GUI():
-        pass
+    def load_GUI(self):
+        columns = [col for col in self.df_vis.columns]
+        self.type = tk.StringVar(value="Line Plot")
+        self.col1 = tk.StringVar(value=columns[0])
+        self.col2 = tk.StringVar(value=columns[1])
+        self.plots = ["Line Plot","Bar Plot","Scatter Plot"]
+        label_type = tk.Label(self.vis_window,relief='ridge',text="Plot Type")
+        label_col1 = tk.Label(self.vis_window,relief='ridge',text="column_x")
+        label_col2 = tk.Label(self.vis_window,relief='ridge',text="column_y")
+        combobox_type = ttk.Combobox(self.vis_window,textvariable=self.type,values=self.plots,state='readonly')
+        combobox_col1 = ttk.Combobox(self.vis_window,textvariable=self.col1,width=10,values=columns.copy(),state='readonly')
+        combobox_col2 = ttk.Combobox(self.vis_window,textvariable=self.col2,width=10,values=columns.copy(),state='readonly')
+        label_type.grid(row=0,column=1,padx=10,pady=25,sticky="nwe")
+        label_col1.grid(row=1,column=1,padx=10,pady=25,sticky="nwe")
+        label_col2.grid(row=2,column=1,padx=10,pady=25,sticky="nwe")
+        combobox_type.grid(row=0,column=1,padx=10,pady=20,sticky="swe")
+        combobox_col1.grid(row=1,column=1,padx=10,pady=20,sticky="swe")
+        combobox_col2.grid(row=2,column=1,padx=10,pady=20,sticky="swe")
+        
+        #Plot
+        button_plot = tk.Button(self.vis_window,text="Plot",command=self.polt)
+        button_plot.grid(row=3,column=1,padx=10,pady=10,sticky="nwe")
+        button_save = tk.Button(self.vis_window,text="Save",command=self.save)
+        button_save.grid(row=3,column=1,padx=10,pady=10,sticky="swe")
+
+    def polt(self):
+        self.fig , self.ax = plt.subplots()
+        self.canvas = FigureCanvasTkAgg(self.fig,master=self.vis_window)
+        self.widget = self.canvas.get_tk_widget()
+        self.widget.grid(row=0,column=0,rowspan=4,padx=10,pady=10)
+        if self.type.get() == self.plots[0]:
+            self.ax.plot(self.df_vis[self.col1.get()],self.df_vis[self.col2.get()])
+        elif self.type.get() == self.plots[1]:
+            self.ax.Bar(self.df_vis[self.col1.get()],self.df_vis[self.col2.get()])
+        elif self.type.get() == self.plots[2]:
+            self.ax.scatter(self.df_vis[self.col1.get()],self.df_vis[self.col2.get()])
+
+    def save(self):
+        self.fig.savefig(f"Figs/{self.col1.get()} VS {self.col2.get()}.png")
 
 
 
@@ -258,7 +298,7 @@ class ML_window:
         self.ml_window.columnconfigure((0,1,2),weight=1,uniform='a')
         self.ml_window.rowconfigure((0,1,2,3,4,5,6),weight=1,uniform='a')
 
-    def load_GUI():
+    def load_GUI(self):
         pass
 
 
