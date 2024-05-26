@@ -7,6 +7,13 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import Normalizer
+from sklearn.decomposition import PCA
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.cluster import KMeans
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import io
@@ -95,7 +102,7 @@ class pre_window:
         """the main window for the app with 
         all the argument needed for the app"""
         self.perant = perent_window
-        self.pre_window = tk.Toplevel()
+        self.pre_window = tk.Toplevel()         
         
         self.data_name = self.perant.data_name
         self.pre_window.title(title)
@@ -296,12 +303,122 @@ class ML_window:
         self.ml_window.geometry(f"{width}x{height}")
         self.ml_window.resizable(False, False)
         self.ml_window.columnconfigure((0,1,2),weight=1,uniform='a')
-        self.ml_window.rowconfigure((0,1,2,3,4,5,6),weight=1,uniform='a')
+        self.ml_window.rowconfigure((0,1,2,3,4,5),weight=1,uniform='a')
 
     def load_GUI(self):
-        pass
+        columns = [col for col in self.perant.df.columns]
+        #Feature selection
+        num_feature = len(self.perant.df.columns)
+        label_feature = tk.Label(self.ml_window,relief='ridge',text="Feature Selection :")
+        label_feature.grid(row=0,column=0,padx=10,sticky="we")
+        self.feature = tk.IntVar(value=0.0)
+        combo_features = tk.Scale(self.ml_window,relief='ridge',from_=0.0, to=num_feature*1.0-1,resolution=1.0,orient=tk.HORIZONTAL,variable=self.feature)
+        combo_features.grid(row=0,column=1,columnspan=2,padx=10,sticky="we")
+        #test-split
+        label_split = tk.Label(self.ml_window,relief='ridge',text="Scale ratio :")
+        label_split.grid(row=1,column=0,padx=10,sticky="we")
+        self.split_ratio = tk.DoubleVar(value=0.2)
+        split_scale = tk.Scale(self.ml_window,relief='ridge',from_=0.01, to=0.5,resolution=0.01,orient=tk.HORIZONTAL,variable=self.split_ratio)
+        split_scale.grid(row=1,column=1,columnspan=2,padx=10,sticky="we")
+        #algorithm
+        self.algos = ["decision_tree","SVC","KNN","K-Mean"]
+        label_alg = tk.Label(self.ml_window,relief='ridge',text="Choase algorithm & y-labal:")
+        label_alg.grid(row=2,column=0,padx=10,sticky="we")
+        self.cur_algo = tk.StringVar(value=self.algos[0])
+        combo_alg = ttk.Combobox(self.ml_window,textvariable=self.cur_algo,values=self.algos,state='readonly')
+        combo_alg.grid(row=2,column=1,padx=10,sticky="we")
+        self.yl = tk.StringVar(value=columns[-1])
+        combo_yl = ttk.Combobox(self.ml_window,textvariable=self.yl,values=columns,state='readonly')
+        combo_yl.grid(row=2,column=2,padx=10,sticky="we")
+        #evalate
+        button_apply = tk.Button(self.ml_window,text="evalate",command=self.evalate)
+        button_apply.grid(row=5,column=2,padx=10,pady=10,sticky="we")
 
 
+    def evalate(self):
+
+        
+        X = self.perant.df.drop([self.yl.get()],axis="columns")
+        y = self.perant.df[self.yl.get()]
+        # feature-selection
+        if(self.feature.get() > 0.0):
+            
+            pca = PCA(n_components=self.feature.get()).fit(X)
+            X = pca.transform(X)
+            print(X.ndim)
+        #split
+        X_train ,X_test ,y_train,y_test = train_test_split(X,y,test_size=self.split_ratio.get())
+        
+        #algorithm
+        if(self.cur_algo.get() == self.algos[0]):
+            
+            decision_tree = DecisionTreeClassifier()
+            # # Train the classifier on the training data
+            decision_tree.fit(X_train, y_train)
+            
+            # # Predict on the test data
+            y_pred = decision_tree.predict(X_test)
+
+            # Evaluate the model
+            self.accuracy = tk.StringVar(value=accuracy_score(y_test, y_pred))
+            self.report = tk.StringVar(value=classification_report(y_test, y_pred))
+            label_report = scrolledtext.ScrolledText(self.ml_window,width=5,height=7,relief='ridge')
+            label_report.insert(tk.END,f"============{self.algos[0]} algorithm============\n")
+            label_report.insert(tk.END,"Accuracy : "+self.accuracy.get()+"\n \n")
+            label_report.insert(tk.END,self.report.get())
+            label_report.grid(row=3,column=0,columnspan=2,rowspan=3,padx=10,pady=10,sticky="nesw")
+        elif(self.cur_algo.get() == self.algos[1]):
+            
+            svc = SVC()
+            # # Train the classifier on the training data
+            svc.fit(X_train, y_train)
+            
+            # # Predict on the test data
+            y_pred = svc.predict(X_test)
+
+            # Evaluate the model
+            self.accuracy = tk.StringVar(value=accuracy_score(y_test, y_pred))
+            self.report = tk.StringVar(value=classification_report(y_test, y_pred))
+            label_report = scrolledtext.ScrolledText(self.ml_window,width=5,height=7,relief='ridge')
+            label_report.insert(tk.END,f"============{self.algos[1]} algorithm============\n")
+            label_report.insert(tk.END,"Accuracy : "+self.accuracy.get()+"\n \n")
+            label_report.insert(tk.END,self.report.get())
+            label_report.grid(row=3,column=0,columnspan=2,rowspan=3,padx=10,pady=10,sticky="nesw")
+        elif(self.cur_algo.get() == self.algos[2]):
+            
+            knn = KNeighborsClassifier()
+            # # Train the classifier on the training data
+            knn.fit(X_train, y_train)
+            
+            # # Predict on the test data
+            y_pred = knn.predict(X_test)
+
+            # Evaluate the model
+            self.accuracy = tk.StringVar(value=accuracy_score(y_test, y_pred))
+            self.report = tk.StringVar(value=classification_report(y_test, y_pred))
+            label_report = scrolledtext.ScrolledText(self.ml_window,width=5,height=7,relief='ridge')
+            label_report.insert(tk.END,f"============{self.algos[2]} algorithm============\n")
+            label_report.insert(tk.END,"Accuracy : "+self.accuracy.get()+"\n \n")
+            label_report.insert(tk.END,self.report.get())
+            label_report.grid(row=3,column=0,columnspan=2,rowspan=3,padx=10,pady=10,sticky="nesw")
+        elif(self.cur_algo.get() == self.algos[3]):
+            
+            kmeans = KMeans()
+            # # Train the classifier on the training data
+            kmeans.fit(X_train, y_train)
+            
+            # # Predict on the test data
+            y_pred = kmeans.predict(X_test)
+
+            # Evaluate the model
+            self.accuracy = tk.StringVar(value=accuracy_score(y_test, y_pred))
+            self.report = tk.StringVar(value=classification_report(y_test, y_pred))
+            label_report = scrolledtext.ScrolledText(self.ml_window,width=5,height=7,relief='ridge')
+            label_report.insert(tk.END,f"============{self.algos[3]} algorithm============\n")
+            label_report.insert(tk.END,"Accuracy : "+self.accuracy.get()+"\n \n")
+            label_report.insert(tk.END,self.report.get())
+            label_report.grid(row=3,column=0,columnspan=2,rowspan=3,padx=10,pady=10,sticky="nesw")
+        self.load_GUI()
 
 
 
